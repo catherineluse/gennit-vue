@@ -1,11 +1,32 @@
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent, PropType, ref } from "vue";
 import { EventData } from "../../types/eventTypes";
 
 export default defineComponent({
-  setup() {
+  setup(props) {
+    const eventMapRef = ref()
+
+    const getBounds = (events: Array<EventData>) => {
+      const bounds = new google.maps.LatLngBounds() // eslint-disable-line no-undef
+      
+      for (let i = 0; i < events.length; i++ ){
+        const event = events[i]
+        const lat = event?.location?.latitude
+        const lng = event?.location?.longitude
+
+        if (lat && lng) {
+          const loc = new window.google.maps.LatLng(lat, lng)
+          bounds.extend(loc)
+        }
+      }
+      return bounds;
+    }
+    const bounds = getBounds(props.events)
+    eventMapRef.value.fitBounds(bounds)
+
     return {
       center: { lat: 33.4255, lng: -111.94 },
+      eventMapRef
     };
   },
   props: {
@@ -30,6 +51,7 @@ export default defineComponent({
   <div>
     <GMapMap
       :center="center"
+      ref="eventMapRef"
       :zoom="7"
       map-type-id="terrain"
       style="width: 100vw; height: 50rem"
@@ -37,13 +59,16 @@ export default defineComponent({
       <GMapMarker
         v-for="event in events"
         :key="event.title"
-        :position="{ lat: event.location.latitude, lng: event.location.longitude }"
+        :position="{
+          lat: event.location?.latitude,
+          lng: event.location?.longitude,
+        }"
         :clickable="true"
         :draggable="true"
         @mouseover="
           () => {
             $emit('highlightEvent', event.id);
-            $router.push(`#${event.id}`)
+            $router.push(`#${event.id}`);
           }
         "
         @mouseleave="
@@ -60,7 +85,10 @@ export default defineComponent({
         }"
         @click="
           () => {
-            center = { lat: event.location.latitude, lng: event.location.longitude };
+            center = {
+              lat: event.location?.latitude,
+              lng: event.location?.longitude,
+            };
             $emit('highlightEvent', event.id);
             $emit('openPreview', event);
           }
